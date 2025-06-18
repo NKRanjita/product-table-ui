@@ -1,0 +1,20 @@
+.filters {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin: 10px 0;
+  font-family: Arial, sans-serif;
+}
+
+.filters select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
