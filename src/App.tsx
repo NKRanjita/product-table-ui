@@ -1,16 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useProducts } from "./hooks/useProduct";
 import ProductTable from "./components/ProductTable";
 import ProductForm from "./components/ProductForm";
 import Pagination from "./components/Pagination";
-
+import { Product } from "./types/product";
 import "./App.css";
-
-
 
 function App() {
   const {
-    data,
+    data = [],
     loading,
     error,
     fetchData,
@@ -24,47 +22,73 @@ function App() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortAsc, setSortAsc] = useState(true);
+  const [message, setMessage] = useState("");
+
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  const itemsPerPage = 10;
+  const showMessage = (msg: string) => {
+    setMessage(msg);
+    setTimeout(() => setMessage(""), 3000); // clear after 3 seconds
+  };
 
-  const filtered = data.filter((p) => {
-    const matchCategory = category ? p.category === category : true;
-    const matchStock = inStockOnly ? p.inStock : true;
-    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
-    return matchCategory && matchStock && matchSearch;
-  });
+  const filtered = useMemo(() => {
+    return data.filter((p: Product) => {
+      const matchCategory = category ? p.category === category : true;
+      const matchStock = inStockOnly ? p.inStock : true;
+      const matchSearch = p.name?.toLowerCase().includes(search.toLowerCase());
+      return matchCategory && matchStock && matchSearch;
+    });
+  }, [data, category, inStockOnly, search]);
 
-  const sorted = [...filtered].sort((a, b) =>
-    sortAsc ? a.price - b.price : b.price - a.price
-  );
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) =>
+      sortAsc ? a.price - b.price : b.price - a.price
+    );
+  }, [filtered, sortAsc]);
 
-  const paginated = sorted.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginated = useMemo(() => {
+    return sorted.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [sorted, currentPage]);
 
-  const uniqueCategories = Array.from(new Set(data.map((p) => p.category)));
+  const totalPages = useMemo(() => {
+    return Math.ceil(filtered.length / itemsPerPage);
+  }, [filtered]);
 
-  const handleAdd = async (newProduct: any) => {
+  const uniqueCategories = useMemo(() => {
+    return Array.from(new Set(data.map((p) => p.category)));
+  }, [data]);
+
+  const handleAdd = async (newProduct: Omit<Product, "id">) => {
     await addProduct(newProduct);
     setCurrentPage(1);
+    showMessage("✅ Product added successfully.");
   };
 
   const handleDelete = async (id: string) => {
     await deleteProduct(id);
+    setTimeout(() => {
+      const newTotalPages = Math.ceil((filtered.length - 1) / itemsPerPage);
+      if (currentPage > newTotalPages) {
+        setCurrentPage(Math.max(1, newTotalPages));
+      }
+    }, 100);
+    showMessage("🗑️ Product deleted successfully.");
   };
 
-  const handleUpdate = async (updatedProduct: any) => {
+  const handleUpdate = async (updatedProduct: Product) => {
     await updateProduct(updatedProduct);
+    showMessage("✏️ Product updated successfully.");
   };
 
   return (
     <div className="app-container">
       <h1>Product Table</h1>
+
+      {message && <div className="message">{message}</div>}
 
       <div className="filters">
         <input
@@ -94,7 +118,7 @@ function App() {
           </select>
         </label>
 
-        <label>
+        <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <input
             type="checkbox"
             checked={inStockOnly}
@@ -103,8 +127,15 @@ function App() {
               setCurrentPage(1);
             }}
           />
-          In Stock Only
+          <span>In Stock Only</span>
         </label>
+
+        <button
+          className="sort-button"
+          onClick={() => setSortAsc((prev) => !prev)}
+        >
+          Sort by Price {sortAsc ? "↑" : "↓"}
+        </button>
       </div>
 
       <ProductForm onAdd={handleAdd} />
@@ -122,7 +153,7 @@ function App() {
 
       <Pagination
         currentPage={currentPage}
-        totalPages={Math.ceil(filtered.length / itemsPerPage)}
+        totalPages={totalPages}
         onPageChange={setCurrentPage}
       />
     </div>

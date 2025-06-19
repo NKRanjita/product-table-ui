@@ -2,7 +2,12 @@ import { useState } from "react";
 import "./Styles/ProductForm.css";
 
 interface ProductFormProps {
-  onAdd: (newProduct: { name: string; category: string; price: number; inStock: boolean }) => Promise<void>;
+  onAdd: (newProduct: {
+    name: string;
+    category: string;
+    price: number;
+    inStock: boolean;
+  }) => void;
 }
 
 function ProductForm({ onAdd }: ProductFormProps) {
@@ -16,40 +21,47 @@ function ProductForm({ onAdd }: ProductFormProps) {
     e.preventDefault();
     setLoading(true);
 
-    await onAdd({
+    const newProduct = {
       name,
       category,
       price: parseFloat(price),
       inStock,
-    });
+    };
 
-    setName("");
-    setCategory("");
-    setPrice("");
-    setInStock(true);
-    setLoading(false);
+    try {
+      await onAdd(newProduct); // hook handles fetch + setData
+      setName("");
+      setCategory("");
+      setPrice("");
+      setInStock(true);
+    } catch {
+      alert("Failed to add product.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form className="product-form" onSubmit={handleSubmit}>
       <h3>Add Product</h3>
-      <input
-        placeholder="Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-      />
-      <input
-        placeholder="Category"
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        required
-      />
+     <input
+  className="tall-input"
+  placeholder="Name"
+  value={name}
+  onChange={(e) => setName(e.target.value)}
+  required
+/>
+<input
+  className="tall-input"
+  placeholder="Category"
+  value={category}
+  onChange={(e) => setCategory(e.target.value)}
+  required
+/>
+
       <input
         placeholder="Price"
         type="number"
-        min="0"
-        step="0.01"
         value={price}
         onChange={(e) => setPrice(e.target.value)}
         required

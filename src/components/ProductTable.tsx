@@ -1,3 +1,4 @@
+// Updated ProductTable.tsx with status message
 import { useState } from "react";
 import { Product } from "../types/product";
 import "./Styles/ProductTable.css";
@@ -6,9 +7,10 @@ interface Props {
   products: Product[];
   loading: boolean;
   onDelete: (id: string) => void;
-  onUpdate: (updatedProduct: Product) => void;
+  onUpdate: (product: Product) => void;
   sortAsc: boolean;
   onToggleSort: () => void;
+  statusMessage?: string | null;
 }
 
 function ProductTable({
@@ -18,27 +20,12 @@ function ProductTable({
   onUpdate,
   sortAsc,
   onToggleSort,
+  statusMessage,
 }: Props) {
   const [editId, setEditId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Partial<Product>>({});
+  const [editValues, setEditValues] = useState<Partial<Product>>({});
 
-  if (loading) {
-    return (
-      <div className="skeleton-table">
-        {[...Array(10)].map((_, i) => (
-          <div key={i} className="skeleton-row" />
-        ))}
-      </div>
-    );
-  }
-
-  const handleSave = () => {
-    if (editId && editData.name && editData.category && editData.price !== undefined) {
-      onUpdate({ ...(editData as Product), id: editId });
-      setEditId(null);
-      setEditData({});
-    }
-  };
+  if (loading) return <p>Loading...</p>;
 
   return (
     <table className="product-table">
@@ -54,94 +41,144 @@ function ProductTable({
         </tr>
       </thead>
       <tbody>
-        {products.map((p) => (
-          <tr key={p.id}>
-            <td>
-              {editId === p.id ? (
-                <input
-                  value={editData.name || ""}
-                  onChange={(e) =>
-                    setEditData((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                />
-              ) : (
-                p.name
-              )}
-            </td>
-            <td>
-              {editId === p.id ? (
-                <input
-                  value={editData.category || ""}
-                  onChange={(e) =>
-                    setEditData((prev) => ({ ...prev, category: e.target.value }))
-                  }
-                />
-              ) : (
-                p.category
-              )}
-            </td>
-            <td>
-              {editId === p.id ? (
-                <input
-                  type="number"
-                  value={editData.price?.toString() || ""}
-                  onChange={(e) =>
-                    setEditData((prev) => ({
-                      ...prev,
-                      price: parseFloat(e.target.value),
-                    }))
-                  }
-                />
-              ) : (
-                `₹${p.price.toFixed(2)}`
-              )}
-            </td>
-            <td>
-              {editId === p.id ? (
-                <input
-                  type="checkbox"
-                  checked={editData.inStock ?? false}
-                  onChange={(e) =>
-                    setEditData((prev) => ({
-                      ...prev,
-                      inStock: e.target.checked,
-                    }))
-                  }
-                />
-              ) : p.inStock ? (
-                "✅"
-              ) : (
-                "❌"
-              )}
-            </td>
-            <td>
-              {editId === p.id ? (
-                <>
-                  <button  className="save-btn" onClick={handleSave}>Save</button>
-                  <button  className="cancel-btn" onClick={() => setEditId(null)}>Cancel</button>
-                </>
-              ) : (
-                <>
-                  <button className="edit-btn"
-                    onClick={() => {
-                      setEditId(p.id);
-                      setEditData(p);
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button className="delete-btn"
-                    onClick={() => {
-                      if (window.confirm("Delete this product?")) onDelete(p.id);
-                    }}
-                  >
-                    Delete
-                  </button>
-                </>
-              )}
+        {statusMessage && (
+          <tr>
+            <td colSpan={5}>
+              <div
+                style={{
+                  padding: "10px",
+                  backgroundColor: "#e6ffed",
+                  border: "1px solid #b2f2bb",
+                  borderRadius: "4px",
+                  color: "#2d7a2d",
+                  marginBottom: "10px",
+                  textAlign: "center",
+                }}
+              >
+                {statusMessage}
+              </div>
             </td>
           </tr>
-        ))}
+        )}
+
+        {products.map((p) => {
+          const isEditing = p.id === editId;
+
+          return (
+            <tr key={p.id}>
+              <td>
+                {isEditing ? (
+                  <input
+                    value={editValues.name ?? p.name}
+                    onChange={(e) =>
+                      setEditValues({ ...editValues, name: e.target.value })
+                    }
+                  />
+                ) : (
+                  p.name
+                )}
+              </td>
+              <td>
+                {isEditing ? (
+                  <input
+                    value={editValues.category ?? p.category}
+                    onChange={(e) =>
+                      setEditValues({
+                        ...editValues,
+                        category: e.target.value,
+                      })
+                    }
+                  />
+                ) : (
+                  p.category
+                )}
+              </td>
+              <td>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={editValues.price ?? p.price}
+                    onChange={(e) =>
+                      setEditValues({
+                        ...editValues,
+                        price: parseFloat(e.target.value),
+                      })
+                    }
+                  />
+                ) : (
+                  `₹${p.price}`
+                )}
+              </td>
+              <td>
+                {isEditing ? (
+                  <input
+                    type="checkbox"
+                    checked={editValues.inStock ?? p.inStock}
+                    onChange={(e) =>
+                      setEditValues({
+                        ...editValues,
+                        inStock: e.target.checked,
+                      })
+                    }
+                  />
+                ) : p.inStock ? (
+                  "✅"
+                ) : (
+                  "❌"
+                )}
+              </td>
+              <td>
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        onUpdate({
+                          id: p.id,
+                          name: editValues.name ?? p.name,
+                          category: editValues.category ?? p.category,
+                          price: editValues.price ?? p.price,
+                          inStock: editValues.inStock ?? p.inStock,
+                        });
+                        setEditId(null);
+                        setEditValues({});
+                      }}
+                      className="save-btn"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditId(null);
+                        setEditValues({});
+                      }}
+                      className="cancel-btn"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setEditId(p.id);
+                        setEditValues(p);
+                      }}
+                      className="edit-btn"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onDelete(p.id)}
+                      className="delete-btn"
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
